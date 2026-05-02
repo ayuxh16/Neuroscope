@@ -115,4 +115,4 @@ This project directly implements techniques from Anthropic's published research:
 
 ---
 
-*Built by [Your Name] · 2026*
+*Built by Ayush Singh 2026*
