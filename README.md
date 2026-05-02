@@ -1,4 +1,4 @@
-# 🔬 NeuроScope
+# 🔬 NeurоScope
 ### *See inside the mind of AI*
 
 A Mechanistic Interpretability tool that lets you visualize what's happening inside GPT-2's attention heads — and surgically disable them to discover what each circuit does.
