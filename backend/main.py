@@ -1,5 +1,5 @@
 """
-main.py — NeuроScope FastAPI backend
+main.py — NeuroScope FastAPI backend
 
 Endpoints:
   GET  /health            → Check if model is loaded
@@ -21,6 +21,8 @@ import time
 from model.loader import model_loader
 from model.analyzer import analyze_prompt
 from model.ablation import run_ablation_experiment
+from utils.tokenizer import tokenize, get_vocabulary_info
+from utils.formatting import format_analyze_response, format_probability_diff
 
 # ── LOGGING ──────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO)
@@ -78,6 +80,28 @@ def health_check():
     }
 
 
+@app.post("/tokenize")
+def tokenize_text(req: AnalyzeRequest):
+    """
+    Tokenize a prompt and return rich token metadata.
+
+    Shows: raw tokens, clean tokens, space markers, byte lengths,
+    character-to-token mapping. Used by the frontend token visualizer.
+
+    Example: "Hello world" → ["Hello", "·world"] with IDs [15496, 995]
+    """
+    try:
+        return tokenize(req.prompt)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/vocabulary")
+def vocabulary_info():
+    """Return GPT-2 vocabulary metadata and sample tokens."""
+    return get_vocabulary_info()
+
+
 @app.get("/model/info")
 def model_info():
     """
@@ -124,9 +148,15 @@ def analyze(req: AnalyzeRequest):
         elapsed = round(time.time() - start, 2)
         logger.info(f"Analysis complete in {elapsed}s")
 
-        data = result.to_dict()
-        data["elapsed_seconds"] = elapsed
-        return data
+        # Get rich token metadata
+        token_info = tokenize(req.prompt)
+
+        # Format raw result into clean frontend-ready response
+        raw = result.to_dict()
+        raw["elapsed_seconds"] = elapsed
+        formatted = format_analyze_response(raw, token_info["clean_tokens"])
+        formatted["token_metadata"] = token_info["token_metadata"]
+        return formatted
 
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
@@ -156,6 +186,11 @@ def ablate(req: AblationRequest):
             heads_to_ablate=req.heads_to_ablate,
         )
         elapsed = round(time.time() - start, 2)
+
+        # Format the probability diff with colors and percentages
+        result["probability_diff"] = format_probability_diff(
+            result.get("probability_diff", [])
+        )
         result["elapsed_seconds"] = elapsed
         logger.info(f"Ablation complete in {elapsed}s. Output changed: {result['output_changed']}")
         return result
