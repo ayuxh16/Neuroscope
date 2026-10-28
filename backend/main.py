@@ -14,6 +14,7 @@ Run with:
 """
 
 import logging
+import os
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -37,6 +38,11 @@ logger = logging.getLogger(__name__)
 # Without a lock, a concurrent request could run while another request's
 # hooks are attached and silently get ablated results.
 model_lock = threading.Lock()
+
+_ORIGINS = [
+    "http://localhost:3000", "http://127.0.0.1:3000",
+    "http://localhost:3001", "http://127.0.0.1:3001",
+] + [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
 
 # -- LIFESPAN (replaces deprecated on_event("startup")) ---------------
@@ -64,7 +70,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"],
+    allow_origins=_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
